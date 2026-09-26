@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlgoScope - Interactive Algorithm Visualizer</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for crisp UI icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            darkBg: '#0b0f19',
+            darkCard: '#111827',
+            darkBorder: '#1f2937',
+            surface: '#151d2f'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background-color: #0b0f19;
+      color: #f3f4f6;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f2937;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #374151;
+    }
+
+    /* Range slider customized styling */
+    input[type=range] {
+      accent-color: #6366f1;
+    }
+
+    /* Pathfinding grid cell styling */
+    .grid-cell {
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+    .grid-cell.wall {
+      background-color: #1e293b !important;
+      border-color: #334155;
+      animation: wallAnim 0.25s ease-out forwards;
+    }
+    .grid-cell.start {
+      background-color: #10b981 !important;
+      background-image: radial-gradient(circle, #34d399 25%, transparent 35%);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+    }
+    .grid-cell.target {
+      background-color: #f43f5e !important;
+      background-image: radial-gradient(circle, #fb7185 25%, transparent 35%);
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+    }
+    .grid-cell.visited {
+      animation: visitedNode 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .grid-cell.path {
+      animation: pathNode 0.5s ease-in forwards;
+    }
+
+    @keyframes wallAnim {
+      0% { transform: scale(0.4); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes visitedNode {
+      0% {
+        transform: scale(0.3);
+        background-color: rgba(99, 102, 241, 0.2);
+        border-radius: 100%;
+      }
+      50% {
+        background-color: rgba(139, 92, 246, 0.65);
+      }
+      100% {
+        transform: scale(1);
+        background-color: rgba(67, 56, 202, 0.85);
+        border: 1px solid rgba(129, 140, 248, 0.2);
+      }
+    }
+    @keyframes pathNode {
+      0% {
+        transform: scale(0.5);
+        background-color: #f59e0b;
+      }
+      50% {
+        transform: scale(1.15);
+        background-color: #fbbf24;
+      }
+      100% {
+        transform: scale(1);
+        background-color: #eab308;
+        box-shadow: 0 0 8px rgba(234, 179, 8, 0.6);
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+  <header class="border-b border-darkBorder bg-darkCard/80 backdrop-blur sticky top-0 z-50 px-4 lg:px-8 py-3.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <i class="fa-solid fa-code-merge text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-gray-200 to-indigo-300 bg-clip-text text-transparent">
+            AlgoScope <span class="text-xs px-2 py-0.5 ml-1 rounded font-mono bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">v2.0</span>
+          </h1>
+          <p class="text-xs text-indigo-300/90 font-medium hidden sm:flex items-center gap-2">
+            <span>Made by: <strong class="text-white">Shivam Kumar</strong></span>
+            <span class="text-gray-500">&bull;</span>
+            <span>Roll No: <strong class="text-white">11252640</strong></span>
+            <span class="text-gray-500">&bull;</span>
+            <span>Section: <strong class="text-white">3B2</strong></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Module Navigation Switchers -->
+      <nav class="flex p-1 bg-surface rounded-xl border border-darkBorder space-x-1" id="moduleTabs">
+        <button data-tab="sorting" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg text-white bg-brand-600 shadow-md transition flex items-center space-x-2">
+          <i class="fa-solid fa-arrow-down-short-wide text-xs"></i>
+          <span>Sorting</span>
+        </button>
+        <button data-tab="searching" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-400 hover:text-white transition flex items-center space-x-2">
+          <i class="fa-solid fa-magnifying-glass text-xs"></i>
+          <span>Searching</span>
+        </button>
+        <button data-tab="pathfinding" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-400 hover:text-white transition flex items-center space-x-2">
+          <i class="fa-solid fa-route text-xs"></i>
+          <span>Pathfinding</span>
+        </button>
+      </nav>
+
+      <!-- Quick viva/help modal button -->
+      <button id="theoryDrawerBtn" class="text-xs px-3 py-2 rounded-lg bg-surface border border-darkBorder hover:border-indigo-500/40 text-gray-300 hover:text-indigo-400 transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <span class="hidden md:inline">Theory & Complexity</span>
+      </button>
+
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 lg:p-6 space-y-6">
+
+    <!-- Universal Controls Bar -->
+    <div class="bg-surface rounded-2xl p-4 lg:p-5 border border-darkBorder shadow-xl shadow-black/20 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Left Controls: Algorithm Picker & Parameters -->
+      <div class="flex flex-wrap items-center gap-4">
+        <!-- Dynamic Algorithm Select based on Tab -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-1">Algorithm</label>
+          <select id="algoSelect" class="bg-darkBg border border-darkBorder text-gray-200 text-sm rounded-lg px-3.5 py-2 focus:outline-none focus:border-brand-500 transition">
+            <!-- Populated via JavaScript dynamically -->
+          </select>
+        </div>
+
+        <!-- Custom inputs / Target search input -->
+        <div id="targetInputContainer" class="hidden">
+          <label class="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-1">Target Element</label>
+          <input type="number" id="targetValue" value="42" class="w-24 bg-darkBg border border-darkBorder text-gray-200 text-sm rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-brand-500">
+        </div>
+
+        <!-- Size / Complexity Slider -->
+        <div id="sizeControlGroup">
+          <label class="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-1 flex justify-between">
+            <span>Size: <span id="sizeDisplay" class="font-mono text-indigo-400 font-bold">35</span></span>
+          </label>
+          <input type="range" id="sizeRange" min="10" max="80" value="35" class="w-28 sm:w-36 h-2 bg-darkBg rounded-lg cursor-pointer">
+        </div>
+
+        <!-- Speed Slider -->
+        <div>
+          <label class="block text-xs uppercase tracking-wider font-semibold text-gray-400 mb-1 flex justify-between">
+            <span>Speed: <span id="speedDisplay" class="font-mono text-indigo-400 font-bold">Medium</span></span>
+          </label>
+          <input type="range" id="speedRange" min="5" max="250" value="70" class="w-28 sm:w-36 h-2 bg-darkBg rounded-lg cursor-pointer">
+        </div>
+      </div>
+
+      <!-- Right Controls: Action buttons -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button id="startBtn" class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-brand-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-medium text-sm rounded-xl shadow-lg shadow-indigo-600/30 active:scale-95 transition flex items-center space-x-2">
+          <i class="fa-solid fa-play text-xs"></i>
+          <span>Visualize</span>
+        </button>
+
+        <button id="pauseBtn" class="px-4 py-2.5 bg-darkBg border border-darkBorder text-gray-300 hover:text-white hover:border-gray-600 font-medium text-sm rounded-xl transition flex items-center space-x-1.5">
+          <i class="fa-solid fa-pause text-xs"></i>
+          <span>Pause</span>
+        </button>
+
+        <button id="resetBtn" class="px-4 py-2.5 bg-darkBg border border-darkBorder text-gray-300 hover:text-rose-400 hover:border-rose-500/40 font-medium text-sm rounded-xl transition flex items-center space-x-1.5">
+          <i class="fa-solid fa-arrow-rotate-right text-xs"></i>
+          <span>Reset / Shuffle</span>
+        </button>
+
+        <!-- Pathfinding Wall Options Button Group (Visible only in Grid mode) -->
+        <div id="gridExtraControls" class="hidden flex items-center gap-1.5">
+          <button id="clearWallsBtn" class="px-3.5 py-2.5 bg-darkBg border border-darkBorder text-gray-300 hover:text-amber-400 font-medium text-xs rounded-xl transition">
+            Clear Walls
+          </button>
+          <button id="generateMazeBtn" class="px-3.5 py-2.5 bg-darkBg border border-darkBorder text-gray-300 hover:text-emerald-400 font-medium text-xs rounded-xl transition">
+            Random Maze
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-surface/70 border border-darkBorder/80 rounded-xl p-3.5 flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-clock"></i>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400 font-medium">Time Complexity</p>
+          <p id="statTimeComplexity" class="text-sm font-mono font-bold text-gray-200">O(n²)</p>
+        </div>
+      </div>
+
+      <div class="bg-surface/70 border border-darkBorder/80 rounded-xl p-3.5 flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-database"></i>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400 font-medium">Space Complexity</p>
+          <p id="statSpaceComplexity" class="text-sm font-mono font-bold text-gray-200">O(1)</p>
+        </div>
+      </div>
+
+      <div class="bg-surface/70 border border-darkBorder/80 rounded-xl p-3.5 flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-arrows-split-up-and-left"></i>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400 font-medium" id="statLabel1">Comparisons</p>
+          <p id="statMetric1" class="text-sm font-mono font-bold text-gray-200">0</p>
+        </div>
+      </div>
+
+      <div class="bg-surface/70 border border-darkBorder/80 rounded-xl p-3.5 flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-repeat"></i>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400 font-medium" id="statLabel2">Swaps</p>
+          <p id="statMetric2" class="text-sm font-mono font-bold text-gray-200">0</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="relative bg-surface rounded-2xl border border-darkBorder p-5 min-h-[460px] flex flex-col justify-center items-center overflow-hidden">
+      
+      <!-- Status Badge & Legend -->
+      <div class="absolute top-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2 z-10">
+        <div class="flex items-center space-x-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" id="statusPulse"></span>
+          <span id="systemStatusText" class="text-xs uppercase tracking-wider font-semibold font-mono text-gray-300">Ready</span>
+        </div>
+
+        <!-- Color Legend (Dynamic per module) -->
+        <div id="moduleLegend" class="flex flex-wrap items-center gap-3 text-xs text-gray-300 bg-darkBg/80 px-3 py-1.5 rounded-lg border border-darkBorder/60 backdrop-blur">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <!-- VIEW 1: SORTING BARS STAGE -->
+      <div id="sortingStage" class="w-full h-80 flex items-end justify-center gap-1 pt-12 transition-all">
+        <!-- Bars are dynamically injected here -->
+      </div>
+
+      <!-- VIEW 2: SEARCHING STAGE -->
+      <div id="searchingStage" class="w-full hidden flex-col items-center justify-center pt-8 space-y-8">
+        <div id="searchGrid" class="flex flex-wrap justify-center gap-2 max-w-4xl px-4 py-8">
+          <!-- Array elements for searching -->
+        </div>
+        <div id="searchIndicatorMessage" class="text-sm font-mono text-indigo-300 bg-indigo-950/40 px-4 py-2 rounded-lg border border-indigo-800/40">
+          Target element: Select an element or hit Visualize.
+        </div>
+      </div>
+
+      <!-- VIEW 3: PATHFINDING GRID STAGE -->
+      <div id="pathfindingStage" class="w-full hidden flex-col items-center justify-center pt-10 pb-2 overflow-x-auto">
+        <div class="text-xs text-gray-400 mb-2 font-mono">
+          <i class="fa-solid fa-hand-pointer text-indigo-400 mr-1"></i> Click and drag on cells to paint walls. Click start (green) or target (red) to relocate them.
+        </div>
+        <div id="pathGrid" class="grid bg-darkBg/90 border border-darkBorder shadow-2xl rounded-md cursor-crosshair">
+          <!-- Cells created dynamically -->
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <aside id="theoryDrawer" class="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-darkCard border-l border-darkBorder z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl">
+    <div class="p-5 border-b border-darkBorder flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <i class="fa-solid fa-book-open-reader text-indigo-400 text-lg"></i>
+        <h3 class="font-bold text-gray-100" id="drawerTitle">Algorithm Mechanics</h3>
+      </div>
+      <button id="closeDrawerBtn" class="text-gray-400 hover:text-white p-1 rounded-lg">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto space-y-6 flex-grow text-sm leading-relaxed text-gray-300">
+      
+      <div>
+        <h4 class="text-xs font-mono uppercase tracking-wider text-indigo-400 font-semibold mb-1">Concept Overview</h4>
+        <p id="drawerDesc" class="text-gray-300">Loading documentation...</p>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-mono uppercase tracking-wider text-indigo-400 font-semibold mb-2">Complexity Matrix</h4>
+        <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+          <div class="p-3 bg-surface rounded-lg border border-darkBorder">
+            <span class="text-gray-400 block mb-0.5">Best Case</span>
+            <span id="theoryBest" class="text-emerald-400 font-bold">O(n)</span>
+          </div>
+          <div class="p-3 bg-surface rounded-lg border border-darkBorder">
+            <span class="text-gray-400 block mb-0.5">Average Case</span>
+            <span id="theoryAvg" class="text-amber-400 font-bold">O(n²)</span>
+          </div>
+          <div class="p-3 bg-surface rounded-lg border border-darkBorder">
+            <span class="text-gray-400 block mb-0.5">Worst Case</span>
+            <span id="theoryWorst" class="text-rose-400 font-bold">O(n²)</span>
+          </div>
+          <div class="p-3 bg-surface rounded-lg border border-darkBorder">
+            <span class="text-gray-400 block mb-0.5">Space Auxiliary</span>
+            <span id="theorySpace" class="text-indigo-400 font-bold">O(1)</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-mono uppercase tracking-wider text-indigo-400 font-semibold mb-2">Key Viva / Exam Takeaways</h4>
+        <ul id="drawerTakeaways" class="list-disc list-inside space-y-1.5 text-xs text-gray-300 font-sans">
+          <li>Stable in-place sorting algorithm.</li>
+          <li>Performs repeated passes swapping adjacent out-of-order elements.</li>
+        </ul>
+      </div>
+
+      <div class="p-4 bg-brand-500/10 border border-brand-500/20 rounded-xl">
+        <h5 class="text-xs font-bold text-indigo-300 mb-1 flex items-center">
+          <i class="fa-solid fa-lightbulb mr-2 text-amber-400"></i> Examiner Pro-Tip
+        </h5>
+        <p id="drawerTip" class="text-xs text-indigo-200/90 leading-normal">
+          Always clarify if the algorithm operates in-place ($O(1)$ extra memory) and whether it preserves equal keys order (stability).
+        </p>
+      </div>
+
+    </div>
+  </aside>
+
+  <footer class="border-t border-darkBorder bg-darkCard/90 py-3.5 px-4 text-xs text-center text-gray-300 font-mono">
+    <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+      <span class="text-indigo-400 font-semibold flex items-center gap-1.5">
+        <i class="fa-solid fa-user-graduate"></i>
+        Made by - Shivam Kumar
+      </span>
+      <span class="text-gray-600 hidden sm:inline">&bull;</span>
+      <span>Roll No: <span class="text-white font-bold">11252640</span></span>
+      <span class="text-gray-600 hidden sm:inline">&bull;</span>
+      <span>Section: <span class="text-white font-bold">3B2</span></span>
+    </div>
+  </footer>
+
+  <script>
+    const STATE = {
+      currentModule: 'sorting', // 'sorting', 'searching', 'pathfinding'
+      currentAlgo: 'bubble',
+      isRunning: false,
+      isPaused: false,
+      speed: 70, // delay in ms
+      arraySize: 35,
+      sortingArray: [],
+      searchingArray: [],
+      stats: {
+        comparisons: 0,
+        swaps: 0,
+        visitedNodes: 0,
+        pathLength: 0
+      },
+      abortController: null
+    };
+
+    // Dictionary of theoretical data for Viva examinations
+    const ALGO_METADATA = {
+      // Sorting
+      bubble: {
+        name: 'Bubble Sort',
+        module: 'sorting',
+        bestTime: 'O(n)',
+        avgTime: 'O(n²)',
+        worstTime: 'O(n²)',
+        space: 'O(1)',
+        desc: 'Bubble Sort repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order. The pass through the list is repeated until the list is completely sorted.',
+        takeaways: [
+          'Stable algorithm: preserves the relative order of duplicate items.',
+          'Adaptive: can terminate early in O(n) if an optimized flag detects zero swaps in a pass.',
+          'In-place sorting with O(1) auxiliary space.'
+        ],
+        tip: 'Mention the swap-flag optimization when asked why Bubble Sort can achieve O(n) in its best case.'
+      },
+      selection: {
+        name: 'Selection Sort',
+        module: 'sorting',
+        bestTime: 'O(n²)',
+        avgTime: 'O(n²)',
+        worstTime: 'O(n²)',
+        space: 'O(1)',
+        desc: 'Selection Sort divides the array into a sorted and unsorted region. In every iteration, it finds the smallest element from the unsorted region and swaps it to the front.',
+        takeaways: [
+          'Always makes exactly O(n²) comparisons, regardless of original ordering.',
+          'Minimizes total memory writes (at most n-1 swaps), useful for EEPROM memory.',
+          'Default implementation is unstable due to long-distance swaps.'
+        ],
+        tip: 'External examiners frequently ask which algorithm does the minimum number of swaps: Selection Sort (maximum O(n) swaps).'
+      },
+      insertion: {
+        name: 'Insertion Sort',
+        module: 'sorting',
+        bestTime: 'O(n)',
+        avgTime: 'O(n²)',
+        worstTime: 'O(n²)',
+        space: 'O(1)',
+        desc: 'Insertion Sort builds the final sorted array one item at a time by repeatedly taking the next unsorted element and inserting it into its correct relative position within the sorted section.',
+        takeaways: [
+          'Extremely efficient for small arrays or nearly-sorted datasets.',
+          'Stable, online (can sort a stream of data as it receives items).',
+          'Used inside hybrid algorithms like Timsort (Python / Java standard).'
+        ],
+        tip: 'Mention that Insertion Sort outperforms QuickSort on very small arrays (e.g. n < 16), which is why standard library sorts use it as a base case.'
+      },
+      quick: {
+        name: 'Quick Sort (Hoare/Lomuto)',
+        module: 'sorting',
+        bestTime: 'O(n log n)',
+        avgTime: 'O(n log n)',
+        worstTime: 'O(n²)',
+        space: 'O(log n)',
+        desc: 'QuickSort is a Divide-and-Conquer algorithm. It selects a pivot element, partitions the array such that smaller elements are placed left and greater elements right, and recurses on both halves.',
+        takeaways: [
+          'Cache-friendly and generally faster in practice than MergeSort despite O(n²) worst-case.',
+          'Worst-case happens when the pivot chosen is consistently the smallest or largest item.',
+          'Randomized or 3-way median-of-three pivots mitigate the O(n²) risk.'
+        ],
+        tip: 'Clarify that standard QuickSort is not stable, and call stack depth takes O(log n) auxiliary space.'
+      },
+      merge: {
+        name: 'Merge Sort',
+        module: 'sorting',
+        bestTime: 'O(n log n)',
+        avgTime: 'O(n log n)',
+        worstTime: 'O(n log n)',
+        space: 'O(n)',
+        desc: 'Merge Sort divides the array into two equal halves, recursively sorts them, and then merges the two sorted subarrays back together in linear time.',
+        takeaways: [
+          'Guaranteed O(n log n) runtime across all best, average, and worst-case permutations.',
+          'Stable sort, heavily favored for linked lists and external sorting.',
+          'Requires auxiliary memory O(n) for temporary merge buffers.'
+        ],
+        tip: 'Highlight that MergeSort is strictly preferred for linked lists because sequential access fits merge operations without needing random index access.'
+      },
+      // Searching
+      linearSearch: {
+        name: 'Linear Search',
+        module: 'searching',
+        bestTime: 'O(1)',
+        avgTime: 'O(n)',
+        worstTime: 'O(n)',
+        space: 'O(1)',
+        desc: 'Linear Search sequentially checks each element of the dataset one by one until a match is found or the collection is exhausted.',
+        takeaways: [
+          'Requires no prior ordering or sorting of the input array.',
+          'Works across any sequence data structure (linked lists, arrays).',
+          'Best case O(1) happens if the target is in the very first index.'
+        ],
+        tip: 'Best suited when the collection is unsorted or small, avoiding the O(n log n) sorting overhead.'
+      },
+      binarySearch: {
+        name: 'Binary Search',
+        module: 'searching',
+        bestTime: 'O(1)',
+        avgTime: 'O(log n)',
+        worstTime: 'O(log n)',
+        space: 'O(1)',
+        desc: 'Binary Search operates on a pre-sorted array by continuously halving the search interval. If the target is less than the middle element, it searches the left half; otherwise the right half.',
+        takeaways: [
+          'Strict requirement: Array MUST be sorted prior to execution.',
+          'Halves search space each step: 1 million items are searched in ~20 steps.',
+          'Calculates mid using `low + (high - low) / 2` to prevent integer overflow.'
+        ],
+        tip: 'Always cite integer overflow in viva when asked about computing the midpoint.'
+      },
+      // Pathfinding
+      bfs: {
+        name: 'Breadth-First Search (BFS)',
+        module: 'pathfinding',
+        bestTime: 'O(V + E)',
+        avgTime: 'O(V + E)',
+        worstTime: 'O(V + E)',
+        space: 'O(V)',
+        desc: 'BFS explores graph/grid nodes level-by-level using a FIFO Queue. It systematically visits all immediate neighbors before advancing deeper into the grid.',
+        takeaways: [
+          'Guarantees the shortest path on unweighted graphs or uniform-cost grids.',
+          'Uses a Queue data structure (FIFO).',
+          'V represents vertices (cells) and E represents edges (adjacent moves).'
+        ],
+        tip: 'State that BFS is optimal for shortest paths in uniform-cost graphs, while DFS does not guarantee shortest paths.'
+      },
+      dijkstra: {
+        name: 'Dijkstra / Uniform Cost',
+        module: 'pathfinding',
+        bestTime: 'O((V + E) log V)',
+        avgTime: 'O((V + E) log V)',
+        worstTime: 'O((V + E) log V)',
+        space: 'O(V)',
+        desc: 'Dijkstras algorithm finds the shortest path between nodes by maintaining tentative distances and greedily visiting the lowest-distance unvisited node using a priority structure.',
+        takeaways: [
+          'Father of routing protocols (like OSPF on internet routers).',
+          'Guarantees shortest path even with varying non-negative edge weights.',
+          'Fails when negative weight cycles are present (Bellman-Ford is needed instead).'
+        ],
+        tip: 'Clarify that on an unweighted grid with cost 1 per step, Dijkstra behaves identical to BFS.'
+      },
+      dfs: {
+        name: 'Depth-First Search (DFS)',
+        module: 'pathfinding',
+        bestTime: 'O(V + E)',
+        avgTime: 'O(V + E)',
+        worstTime: 'O(V + E)',
+        space: 'O(V)',
+        desc: 'DFS dives as deep as possible down each branch before backtracking, utilizing a LIFO Stack or recursion.',
+        takeaways: [
+          'Does NOT guarantee the shortest path.',
+          'Useful for topological sort, cycle detection, and maze generation.',
+          'Consumes less memory in narrow, deep trees.'
+        ],
+        tip: 'Notice how the path produced is often jagged and lengthy compared to BFS/Dijkstra.'
+      }
+    };
+
+    const DOM = {
+      algoSelect: document.getElementById('algoSelect'),
+      targetInputContainer: document.getElementById('targetInputContainer'),
+      targetValue: document.getElementById('targetValue'),
+      sizeControlGroup: document.getElementById('sizeControlGroup'),
+      sizeRange: document.getElementById('sizeRange'),
+      sizeDisplay: document.getElementById('sizeDisplay'),
+      speedRange: document.getElementById('speedRange'),
+      speedDisplay: document.getElementById('speedDisplay'),
+      startBtn: document.getElementById('startBtn'),
+      pauseBtn: document.getElementById('pauseBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      gridExtraControls: document.getElementById('gridExtraControls'),
+      clearWallsBtn: document.getElementById('clearWallsBtn'),
+      generateMazeBtn: document.getElementById('generateMazeBtn'),
+      
+      statTimeComplexity: document.getElementById('statTimeComplexity'),
+      statSpaceComplexity: document.getElementById('statSpaceComplexity'),
+      statLabel1: document.getElementById('statLabel1'),
+      statMetric1: document.getElementById('statMetric1'),
+      statLabel2: document.getElementById('statLabel2'),
+      statMetric2: document.getElementById('statMetric2'),
+
+      statusPulse: document.getElementById('statusPulse'),
+      systemStatusText: document.getElementById('systemStatusText'),
+      moduleLegend: document.getElementById('moduleLegend'),
+
+      sortingStage: document.getElementById('sortingStage'),
+      searchingStage: document.getElementById('searchingStage'),
+      searchGrid: document.getElementById('searchGrid'),
+      searchIndicatorMessage: document.getElementById('searchIndicatorMessage'),
+      pathfindingStage: document.getElementById('pathfindingStage'),
+      pathGrid: document.getElementById('pathGrid'),
+
+      theoryDrawer: document.getElementById('theoryDrawer'),
+      theoryDrawerBtn: document.getElementById('theoryDrawerBtn'),
+      closeDrawerBtn: document.getElementById('closeDrawerBtn'),
+      drawerTitle: document.getElementById('drawerTitle'),
+      drawerDesc: document.getElementById('drawerDesc'),
+      theoryBest: document.getElementById('theoryBest'),
+      theoryAvg: document.getElementById('theoryAvg'),
+      theoryWorst: document.getElementById('theoryWorst'),
+      theorySpace: document.getElementById('theorySpace'),
+      drawerTakeaways: document.getElementById('drawerTakeaways'),
+      drawerTip: document.getElementById('drawerTip')
+    };
+
+    function sleep(ms) {
+      return new Promise(resolve => {
+        const check = () => {
+          if (!STATE.isRunning) return resolve();
+          if (!STATE.isPaused) {
+            setTimeout(resolve, ms);
+          } else {
+            setTimeout(check, 40);
+          }
+        };
+        check();
+      });
+    }
+
+    function setStatus(text, type = 'ready') {
+      DOM.systemStatusText.innerText = text;
+      DOM.statusPulse.className = 'inline-block w-2.5 h-2.5 rounded-full ';
+      if (type === 'running') {
+        DOM.statusPulse.className += 'bg-indigo-400 animate-ping';
+      } else if (type === 'paused') {
+        DOM.statusPulse.className += 'bg-amber-400';
+      } else if (type === 'finished') {
+        DOM.statusPulse.className += 'bg-emerald-400';
+      } else {
+        DOM.statusPulse.className += 'bg-gray-400';
+      }
+    }
+
+    function updateMetrics() {
+      if (STATE.currentModule === 'pathfinding') {
+        DOM.statLabel1.innerText = 'Nodes Visited';
+        DOM.statMetric1.innerText = STATE.stats.visitedNodes;
+        DOM.statLabel2.innerText = 'Shortest Path Length';
+        DOM.statMetric2.innerText = STATE.stats.pathLength;
+      } else {
+        DOM.statLabel1.innerText = 'Comparisons';
+        DOM.statMetric1.innerText = STATE.stats.comparisons;
+        DOM.statLabel2.innerText = 'Swaps / Moves';
+        DOM.statMetric2.innerText = STATE.stats.swaps;
+      }
+    }
+
+    function updateDropdownAndLegends() {
+      DOM.algoSelect.innerHTML = '';
+      if (STATE.currentModule === 'sorting') {
+        DOM.targetInputContainer.classList.add('hidden');
+        DOM.sizeControlGroup.classList.remove('hidden');
+        DOM.gridExtraControls.classList.add('hidden');
+        DOM.sortingStage.classList.remove('hidden');
+        DOM.searchingStage.classList.add('hidden');
+        DOM.pathfindingStage.classList.add('hidden');
+
+        const options = [
+          { val: 'bubble', name: 'Bubble Sort' },
+          { val: 'selection', name: 'Selection Sort' },
+          { val: 'insertion', name: 'Insertion Sort' },
+          { val: 'quick', name: 'Quick Sort' },
+          { val: 'merge', name: 'Merge Sort' }
+        ];
+        options.forEach(opt => {
+          DOM.algoSelect.innerHTML += `<option value="${opt.val}">${opt.name}</option>`;
+        });
+        STATE.currentAlgo = 'bubble';
+
+        DOM.moduleLegend.innerHTML = `
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-indigo-500 mr-1.5"></span> Default</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-amber-400 mr-1.5"></span> Compare</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-rose-500 mr-1.5"></span> Swap/Pivot</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-emerald-500 mr-1.5"></span> Sorted</span>
+        `;
+      } else if (STATE.currentModule === 'searching') {
+        DOM.targetInputContainer.classList.remove('hidden');
+        DOM.sizeControlGroup.classList.remove('hidden');
+        DOM.gridExtraControls.classList.add('hidden');
+        DOM.sortingStage.classList.add('hidden');
+        DOM.searchingStage.classList.remove('hidden');
+        DOM.pathfindingStage.classList.add('hidden');
+
+        const options = [
+          { val: 'linearSearch', name: 'Linear Search' },
+          { val: 'binarySearch', name: 'Binary Search (Sorted Array)' }
+        ];
+        options.forEach(opt => {
+          DOM.algoSelect.innerHTML += `<option value="${opt.val}">${opt.name}</option>`;
+        });
+        STATE.currentAlgo = 'linearSearch';
+
+        DOM.moduleLegend.innerHTML = `
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-indigo-500 mr-1.5"></span> In Range</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-gray-600 mr-1.5"></span> Discarded</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-amber-400 mr-1.5"></span> Checking</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-emerald-500 mr-1.5"></span> Found Match</span>
+        `;
+      } else if (STATE.currentModule === 'pathfinding') {
+        DOM.targetInputContainer.classList.add('hidden');
+        DOM.sizeControlGroup.classList.add('hidden'); // Grid uses fixed dimension
+        DOM.gridExtraControls.classList.remove('hidden');
+        DOM.sortingStage.classList.add('hidden');
+        DOM.searchingStage.classList.add('hidden');
+        DOM.pathfindingStage.classList.remove('hidden');
+
+        const options = [
+          { val: 'bfs', name: 'Breadth-First Search (BFS)' },
+          { val: 'dijkstra', name: 'Dijkstra Algorithm' },
+          { val: 'dfs', name: 'Depth-First Search (DFS)' }
+        ];
+        options.forEach(opt => {
+          DOM.algoSelect.innerHTML += `<option value="${opt.val}">${opt.name}</option>`;
+        });
+        STATE.currentAlgo = 'bfs';
+
+        DOM.moduleLegend.innerHTML = `
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-emerald-500 mr-1.5"></span> Start</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-rose-500 mr-1.5"></span> Target</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-slate-800 mr-1.5"></span> Wall</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-indigo-600 mr-1.5"></span> Visited</span>
+          <span class="flex items-center"><span class="w-3 h-3 rounded bg-amber-400 mr-1.5"></span> Shortest Path</span>
+        `;
+      }
+
+      updateComplexityCards();
+    }
+
+    function updateComplexityCards() {
+      const meta = ALGO_METADATA[STATE.currentAlgo] || ALGO_METADATA.bubble;
+      DOM.statTimeComplexity.innerText = meta.worstTime;
+      DOM.statSpaceComplexity.innerText = meta.space;
+
+      // Update theory drawer as well
+      DOM.drawerTitle.innerText = meta.name;
+      DOM.drawerDesc.innerText = meta.desc;
+      DOM.theoryBest.innerText = meta.bestTime;
+      DOM.theoryAvg.innerText = meta.avgTime;
+      DOM.theoryWorst.innerText = meta.worstTime;
+      DOM.theorySpace.innerText = meta.space;
+      DOM.drawerTip.innerText = meta.tip;
+
+      DOM.drawerTakeaways.innerHTML = '';
+      meta.takeaways.forEach(item => {
+        const li = document.createElement('li');
+        li.innerText = item;
+        DOM.drawerTakeaways.appendChild(li);
+      });
+    }
+
+    function initSortingArray() {
+      STATE.sortingArray = [];
+      STATE.stats.comparisons = 0;
+      STATE.stats.swaps = 0;
+      updateMetrics();
+      setStatus('Ready');
+
+      const count = STATE.arraySize;
+      for (let i = 0; i < count; i++) {
+        // Value between 10 and 100 representing percentage height
+        STATE.sortingArray.push(Math.floor(Math.random() * 85) + 12);
+      }
+      renderSortingBars();
+    }
+
+    function renderSortingBars(highlightIndices = {}) {
+      DOM.sortingStage.innerHTML = '';
+      const total = STATE.sortingArray.length;
+      STATE.sortingArray.forEach((val, idx) => {
+        const bar = document.createElement('div');
+        bar.className = 'w-full rounded-t-sm transition-all duration-75 flex items-end justify-center';
+        bar.style.height = `${val}%`;
+
+        // Color coding
+        if (highlightIndices.sorted && highlightIndices.sorted.includes(idx)) {
+          bar.className += ' bg-emerald-500 shadow-md shadow-emerald-500/20';
+        } else if (highlightIndices.comparing && highlightIndices.comparing.includes(idx)) {
+          bar.className += ' bg-amber-400 shadow-md shadow-amber-400/30';
+        } else if (highlightIndices.swap && highlightIndices.swap.includes(idx)) {
+          bar.className += ' bg-rose-500 shadow-md shadow-rose-500/30';
+        } else if (highlightIndices.pivot === idx) {
+          bar.className += ' bg-purple-500 shadow-md shadow-purple-500/30';
+        } else {
+          bar.className += ' bg-indigo-500/80 hover:bg-indigo-400';
+        }
+
+        // Value text if reasonable bar count
+        if (total <= 35) {
+          const num = document.createElement('span');
+          num.className = 'text-[9px] font-mono font-bold text-white mb-1 drop-shadow';
+          num.innerText = val;
+          bar.appendChild(num);
+        }
+
+        DOM.sortingStage.appendChild(bar);
+      });
+    }
+
+    // Bubble Sort Implementation
+    async function runBubbleSort() {
+      const arr = STATE.sortingArray;
+      const n = arr.length;
+      const sorted = [];
+
+      for (let i = 0; i < n; i++) {
+        let swapped = false;
+        for (let j = 0; j < n - i - 1; j++) {
+          if (!STATE.isRunning) return;
+
+          STATE.stats.comparisons++;
+          updateMetrics();
+          renderSortingBars({ comparing: [j, j + 1], sorted });
+          await sleep(STATE.speed);
+
+          if (arr[j] > arr[j + 1]) {
+            [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+            STATE.stats.swaps++;
+            swapped = true;
+            updateMetrics();
+            renderSortingBars({ swap: [j, j + 1], sorted });
+            await sleep(STATE.speed);
+          }
+        }
+        sorted.push(n - i - 1);
+        if (!swapped) {
+          for (let k = 0; k < n - i; k++) sorted.push(k);
+          break;
+        }
+      }
+      renderSortingBars({ sorted: arr.map((_, i) => i) });
+    }
+
+    // Selection Sort Implementation
+    async function runSelectionSort() {
+      const arr = STATE.sortingArray;
+      const n = arr.length;
+      const sorted = [];
+
+      for (let i = 0; i < n; i++) {
+        let minIdx = i;
+        for (let j = i + 1; j < n; j++) {
+          if (!STATE.isRunning) return;
+          STATE.stats.comparisons++;
+          updateMetrics();
+          renderSortingBars({ comparing: [minIdx, j], sorted, pivot: minIdx });
+          await sleep(STATE.speed);
+
+          if (arr[j] < arr[minIdx]) {
+            minIdx = j;
+          }
+        }
+        if (minIdx !== i) {
+          [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+          STATE.stats.swaps++;
+          updateMetrics();
+          renderSortingBars({ swap: [i, minIdx], sorted });
+          await sleep(STATE.speed);
+        }
+        sorted.push(i);
+      }
+      renderSortingBars({ sorted: arr.map((_, i) => i) });
+    }
+
+    // Insertion Sort Implementation
+    async function runInsertionSort() {
+      const arr = STATE.sortingArray;
+      const n = arr.length;
+      const sorted = [0];
+
+      for (let i = 1; i < n; i++) {
+        let key = arr[i];
+        let j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+          if (!STATE.isRunning) return;
+          STATE.stats.comparisons++;
+          STATE.stats.swaps++;
+          updateMetrics();
+          arr[j + 1] = arr[j];
+          renderSortingBars({ comparing: [j, j + 1], sorted: [...sorted], pivot: i });
+          await sleep(STATE.speed);
+          j--;
+        }
+        arr[j + 1] = key;
+        sorted.push(i);
+      }
+      renderSortingBars({ sorted: arr.map((_, i) => i) });
+    }
+
+    // Quick Sort Implementation
+    async function runQuickSort() {
+      const arr = STATE.sortingArray;
+      const sorted = [];
+
+      async function partition(low, high) {
+        let pivot = arr[high];
+        let i = low - 1;
+        for (let j = low; j < high; j++) {
+          if (!STATE.isRunning) return -1;
+          STATE.stats.comparisons++;
+          updateMetrics();
+          renderSortingBars({ comparing: [j, high], pivot: high, sorted });
+          await sleep(STATE.speed);
+
+          if (arr[j] < pivot) {
+            i++;
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+            STATE.stats.swaps++;
+            updateMetrics();
+            renderSortingBars({ swap: [i, j], pivot: high, sorted });
+            await sleep(STATE.speed);
+          }
+        }
+        [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+        STATE.stats.swaps++;
+        updateMetrics();
+        sorted.push(i + 1);
+        renderSortingBars({ swap: [i + 1, high], sorted });
+        await sleep(STATE.speed);
+        return i + 1;
+      }
+
+      async function quickSortHelper(low, high) {
+        if (low < high) {
+          let pi = await partition(low, high);
+          if (pi === -1 || !STATE.isRunning) return;
+          await quickSortHelper(low, pi - 1);
+          await quickSortHelper(pi + 1, high);
+        } else if (low >= 0 && low < arr.length) {
+          sorted.push(low);
+        }
+      }
+
+      await quickSortHelper(0, arr.length - 1);
+      renderSortingBars({ sorted: arr.map((_, i) => i) });
+    }
+
+    // Merge Sort Implementation
+    async function runMergeSort() {
+      const arr = STATE.sortingArray;
+
+      async function merge(left, mid, right) {
+        let n1 = mid - left + 1;
+        let n2 = right - mid;
+        let L = new Array(n1);
+        let R = new Array(n2);
+
+        for (let i = 0; i < n1; i++) L[i] = arr[left + i];
+        for (let j = 0; j < n2; j++) R[j] = arr[mid + 1 + j];
+
+        let i = 0, j = 0, k = left;
+        while (i < n1 && j < n2) {
+          if (!STATE.isRunning) return;
+          STATE.stats.comparisons++;
+          updateMetrics();
+          renderSortingBars({ comparing: [k], pivot: mid });
+          await sleep(STATE.speed);
+
+          if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+          } else {
+            arr[k] = R[j];
+            j++;
+          }
+          STATE.stats.swaps++;
+          updateMetrics();
+          k++;
+        }
+
+        while (i < n1) {
+          if (!STATE.isRunning) return;
+          arr[k] = L[i];
+          i++; k++;
+          STATE.stats.swaps++;
+          updateMetrics();
+          renderSortingBars({ comparing: [k] });
+          await sleep(STATE.speed / 2);
+        }
+
+        while (j < n2) {
+          if (!STATE.isRunning) return;
+          arr[k] = R[j];
+          j++; k++;
+          STATE.stats.swaps++;
+          updateMetrics();
+          renderSortingBars({ comparing: [k] });
+          await sleep(STATE.speed / 2);
+        }
+      }
+
+      async function mergeSortHelper(l, r) {
+        if (l >= r || !STATE.isRunning) return;
+        let m = l + Math.floor((r - l) / 2);
+        await mergeSortHelper(l, m);
+        await mergeSortHelper(m + 1, r);
+        await merge(l, m, r);
+      }
+
+      await mergeSortHelper(0, arr.length - 1);
+      renderSortingBars({ sorted: arr.map((_, i) => i) });
+    }
+
+    function initSearchingArray() {
+      STATE.searchingArray = [];
+      STATE.stats.comparisons = 0;
+      STATE.stats.swaps = 0;
+      updateMetrics();
+      setStatus('Ready');
+
+      const count = Math.min(STATE.arraySize, 30); // Clean readable cards
+      let start = 5;
+      for (let i = 0; i < count; i++) {
+        start += Math.floor(Math.random() * 5) + 2;
+        STATE.searchingArray.push(start);
+      }
+
+      // If linear search is selected, optionally shuffle so it demonstrates unsorted search
+      if (STATE.currentAlgo === 'linearSearch') {
+        for (let i = STATE.searchingArray.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [STATE.searchingArray[i], STATE.searchingArray[j]] = [STATE.searchingArray[j], STATE.searchingArray[i]];
+        }
+      }
+
+      // Set target to an actual existing element 70% of the time
+      if (Math.random() > 0.3) {
+        const randomExisting = STATE.searchingArray[Math.floor(Math.random() * STATE.searchingArray.length)];
+        DOM.targetValue.value = randomExisting;
+      }
+
+      renderSearchingGrid();
+      DOM.searchIndicatorMessage.innerText = `Target set to ${DOM.targetValue.value}. Click 'Visualize' to begin.`;
+    }
+
+    function renderSearchingGrid(activeMap = {}) {
+      DOM.searchGrid.innerHTML = '';
+      STATE.searchingArray.forEach((val, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'w-12 h-12 rounded-xl flex flex-col items-center justify-center font-mono font-bold text-sm transition-all duration-200 border ';
+
+        if (activeMap.found === idx) {
+          cell.className += 'bg-emerald-500 text-white border-emerald-400 scale-110 shadow-lg shadow-emerald-500/50';
+        } else if (activeMap.current === idx) {
+          cell.className += 'bg-amber-400 text-gray-950 border-amber-300 scale-110 shadow-lg shadow-amber-400/40';
+        } else if (activeMap.discarded && activeMap.discarded.includes(idx)) {
+          cell.className += 'bg-darkBg/60 text-gray-600 border-gray-800 opacity-40';
+        } else if (activeMap.candidate && activeMap.candidate.includes(idx)) {
+          cell.className += 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50';
+        } else {
+          cell.className += 'bg-surface text-gray-200 border-darkBorder hover:border-indigo-500/40';
+        }
+
+        cell.innerHTML = `<span>${val}</span><span class="text-[9px] font-normal text-gray-400 opacity-70">[${idx}]</span>`;
+        DOM.searchGrid.appendChild(cell);
+      });
+    }
+
+    async function runLinearSearch() {
+      const target = parseInt(DOM.targetValue.value, 10);
+      const arr = STATE.searchingArray;
+      const discarded = [];
+
+      for (let i = 0; i < arr.length; i++) {
+        if (!STATE.isRunning) return;
+
+        STATE.stats.comparisons++;
+        updateMetrics();
+        renderSearchingGrid({ current: i, discarded: [...discarded] });
+        DOM.searchIndicatorMessage.innerText = `Inspecting index ${i}: Is ${arr[i]} == ${target}?`;
+        await sleep(STATE.speed * 2);
+
+        if (arr[i] === target) {
+          renderSearchingGrid({ found: i, discarded });
+          DOM.searchIndicatorMessage.innerHTML = `<span class="text-emerald-400 font-bold">Element found!</span> Value ${target} exists at index ${i}.`;
+          setStatus('Target Found', 'finished');
+          return;
+        }
+        discarded.push(i);
+      }
+
+      DOM.searchIndicatorMessage.innerHTML = `<span class="text-rose-400 font-bold">Element Not Found!</span> Scanned entire array without match.`;
+      setStatus('Target Absent', 'finished');
+    }
+
+    async function runBinarySearch() {
+      // Binary search requires ascending sorted array
+      STATE.searchingArray.sort((a, b) => a - b);
+      const target = parseInt(DOM.targetValue.value, 10);
+      const arr = STATE.searchingArray;
+
+      let low = 0;
+      let high = arr.length - 1;
+      let discarded = [];
+
+      while (low <= high) {
+        if (!STATE.isRunning) return;
+
+        let mid = Math.floor(low + (high - low) / 2);
+        let candidate = [];
+        for (let k = low; k <= high; k++) candidate.push(k);
+
+        STATE.stats.comparisons++;
+        updateMetrics();
+
+        renderSearchingGrid({ current: mid, candidate, discarded: [...discarded] });
+        DOM.searchIndicatorMessage.innerText = `Range [${low} .. ${high}]. Midpoint [${mid}] = ${arr[mid]}. Comparing with ${target}.`;
+        await sleep(STATE.speed * 3);
+
+        if (arr[mid] === target) {
+          renderSearchingGrid({ found: mid, discarded });
+          DOM.searchIndicatorMessage.innerHTML = `<span class="text-emerald-400 font-bold">Success!</span> Found target ${target} at index ${mid} in ${STATE.stats.comparisons} comparisons.`;
+          setStatus('Target Found', 'finished');
+          return;
+        }
+
+        if (arr[mid] < target) {
+          for (let k = low; k <= mid; k++) discarded.push(k);
+          low = mid + 1;
+        } else {
+          for (let k = mid; k <= high; k++) discarded.push(k);
+          high = mid - 1;
+        }
+      }
+
+      renderSearchingGrid({ discarded });
+      DOM.searchIndicatorMessage.innerHTML = `<span class="text-rose-400 font-bold">Not Found!</span> Interval collapsed. Element ${target} is not in array.`;
+      setStatus('Target Absent', 'finished');
+    }
+
+    const GRID_ROWS = 18;
+    const GRID_COLS = 36;
+    let gridModel = [];
+    let startNode = { r: 8, c: 5 };
+    let targetNode = { r: 8, c: 30 };
+    let isMouseDown = false;
+
+    function initPathfindingGrid() {
+      gridModel = [];
+      STATE.stats.visitedNodes = 0;
+      STATE.stats.pathLength = 0;
+      updateMetrics();
+      setStatus('Ready');
+
+      DOM.pathGrid.style.gridTemplateColumns = `repeat(${GRID_COLS}, minmax(16px, 22px))`;
+      DOM.pathGrid.style.gridTemplateRows = `repeat(${GRID_ROWS}, minmax(16px, 22px))`;
+      DOM.pathGrid.innerHTML = '';
+
+      for (let r = 0; r < GRID_ROWS; r++) {
+        const row = [];
+        for (let c = 0; c < GRID_COLS; c++) {
+          const cellObj = {
+            r,
+            c,
+            isWall: false,
+            isVisited: false,
+            parent: null,
+            distance: Infinity
+          };
+          row.push(cellObj);
+
+          const cellEl = document.createElement('div');
+          cellEl.id = `cell-${r}-${c}`;
+          cellEl.className = 'grid-cell w-full h-full flex items-center justify-center';
+
+          if (r === startNode.r && c === startNode.c) {
+            cellEl.classList.add('start');
+          } else if (r === targetNode.r && c === targetNode.c) {
+            cellEl.classList.add('target');
+          }
+
+          // Mouse dragging wall placement
+          cellEl.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isMouseDown = true;
+            toggleWall(r, c);
+          });
+          cellEl.addEventListener('mouseenter', () => {
+            if (isMouseDown) toggleWall(r, c);
+          });
+
+          DOM.pathGrid.appendChild(cellEl);
+        }
+        gridModel.push(row);
+      }
+    }
+
+    window.addEventListener('mouseup', () => {
+      isMouseDown = false;
+    });
+
+    function toggleWall(r, c) {
+      if ((r === startNode.r && c === startNode.c) || (r === targetNode.r && c === targetNode.c)) return;
+      const cell = gridModel[r][c];
+      cell.isWall = !cell.isWall;
+      const el = document.getElementById(`cell-${r}-${c}`);
+      if (cell.isWall) {
+        el.classList.add('wall');
+      } else {
+        el.classList.remove('wall');
+      }
+    }
+
+    function clearGridVisuals(keepWalls = false) {
+      STATE.stats.visitedNodes = 0;
+      STATE.stats.pathLength = 0;
+      updateMetrics();
+
+      for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+          const cell = gridModel[r][c];
+          cell.isVisited = false;
+          cell.parent = null;
+          cell.distance = Infinity;
+
+          const el = document.getElementById(`cell-${r}-${c}`);
+          el.classList.remove('visited', 'path');
+
+          if (!keepWalls) {
+            cell.isWall = false;
+            el.classList.remove('wall');
+          }
+        }
+      }
+    }
+
+    function generateRandomMaze() {
+      clearGridVisuals(false);
+      for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+          if ((r === startNode.r && c === startNode.c) || (r === targetNode.r && c === targetNode.c)) continue;
+          if (Math.random() < 0.28) {
+            gridModel[r][c].isWall = true;
+            document.getElementById(`cell-${r}-${c}`).classList.add('wall');
+          }
+        }
+      }
+    }
+
+    // BFS Pathfinding Algorithm
+    async function runBFS() {
+      clearGridVisuals(true);
+      const queue = [];
+      const start = gridModel[startNode.r][startNode.c];
+      start.isVisited = true;
+      queue.push(start);
+
+      const dRow = [-1, 0, 1, 0];
+      const dCol = [0, 1, 0, -1];
+
+      while (queue.length > 0) {
+        if (!STATE.isRunning) return;
+
+        const curr = queue.shift();
+        STATE.stats.visitedNodes++;
+        updateMetrics();
+
+        // Animate visited node
+        if (!(curr.r === startNode.r && curr.c === startNode.c) && !(curr.r === targetNode.r && curr.c === targetNode.c)) {
+          document.getElementById(`cell-${curr.r}-${curr.c}`).classList.add('visited');
+        }
+
+        if (curr.r === targetNode.r && curr.c === targetNode.c) {
+          await reconstructPath(curr);
+          setStatus('Path Found!', 'finished');
+          return;
+        }
+
+        for (let i = 0; i < 4; i++) {
+          const nr = curr.r + dRow[i];
+          const nc = curr.c + dCol[i];
+
+          if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+            const neighbor = gridModel[nr][nc];
+            if (!neighbor.isWall && !neighbor.isVisited) {
+              neighbor.isVisited = true;
+              neighbor.parent = curr;
+              queue.push(neighbor);
+            }
+          }
+        }
+
+        await sleep(Math.max(10, Math.floor(STATE.speed / 5)));
+      }
+
+      setStatus('No Path Exists!', 'finished');
+    }
+
+    // Dijkstra Algorithm (on grid with uniform weight 1)
+    async function runDijkstra() {
+      clearGridVisuals(true);
+      const unvisited = [];
+
+      for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+          gridModel[r][c].distance = Infinity;
+          unvisited.push(gridModel[r][c]);
+        }
+      }
+
+      const start = gridModel[startNode.r][startNode.c];
+      start.distance = 0;
+
+      while (unvisited.length > 0) {
+        if (!STATE.isRunning) return;
+
+        // Sort by distance (greedy step)
+        unvisited.sort((a, b) => a.distance - b.distance);
+        const curr = unvisited.shift();
+
+        if (curr.distance === Infinity || curr.isWall) continue;
+
+        curr.isVisited = true;
+        STATE.stats.visitedNodes++;
+        updateMetrics();
+
+        if (!(curr.r === startNode.r && curr.c === startNode.c) && !(curr.r === targetNode.r && curr.c === targetNode.c)) {
+          document.getElementById(`cell-${curr.r}-${curr.c}`).classList.add('visited');
+        }
+
+        if (curr.r === targetNode.r && curr.c === targetNode.c) {
+          await reconstructPath(curr);
+          setStatus('Shortest Path Found!', 'finished');
+          return;
+        }
+
+        const dRow = [-1, 0, 1, 0];
+        const dCol = [0, 1, 0, -1];
+        for (let i = 0; i < 4; i++) {
+          const nr = curr.r + dRow[i];
+          const nc = curr.c + dCol[i];
+          if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+            const neighbor = gridModel[nr][nc];
+            if (!neighbor.isWall && !neighbor.isVisited) {
+              const newDist = curr.distance + 1;
+              if (newDist < neighbor.distance) {
+                neighbor.distance = newDist;
+                neighbor.parent = curr;
+              }
+            }
+          }
+        }
+
+        await sleep(Math.max(8, Math.floor(STATE.speed / 6)));
+      }
+      setStatus('No Path Found', 'finished');
+    }
+
+    // DFS Algorithm
+    async function runDFS() {
+      clearGridVisuals(true);
+      const stack = [];
+      const start = gridModel[startNode.r][startNode.c];
+      stack.push(start);
+
+      const dRow = [-1, 0, 1, 0];
+      const dCol = [0, 1, 0, -1];
+
+      while (stack.length > 0) {
+        if (!STATE.isRunning) return;
+
+        const curr = stack.pop();
+        if (curr.isVisited) continue;
+        curr.isVisited = true;
+        STATE.stats.visitedNodes++;
+        updateMetrics();
+
+        if (!(curr.r === startNode.r && curr.c === startNode.c) && !(curr.r === targetNode.r && curr.c === targetNode.c)) {
+          document.getElementById(`cell-${curr.r}-${curr.c}`).classList.add('visited');
+        }
+
+        if (curr.r === targetNode.r && curr.c === targetNode.c) {
+          await reconstructPath(curr);
+          setStatus('DFS Target Reached!', 'finished');
+          return;
+        }
+
+        for (let i = 0; i < 4; i++) {
+          const nr = curr.r + dRow[i];
+          const nc = curr.c + dCol[i];
+          if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+            const neighbor = gridModel[nr][nc];
+            if (!neighbor.isWall && !neighbor.isVisited) {
+              neighbor.parent = curr;
+              stack.push(neighbor);
+            }
+          }
+        }
+
+        await sleep(Math.max(10, Math.floor(STATE.speed / 5)));
+      }
+      setStatus('Target Unreachable', 'finished');
+    }
+
+    // Path Reconstruction Animation
+    async function reconstructPath(targetCell) {
+      let curr = targetCell.parent;
+      const pathCells = [];
+      while (curr && !(curr.r === startNode.r && curr.c === startNode.c)) {
+        pathCells.push(curr);
+        curr = curr.parent;
+      }
+      pathCells.reverse();
+      STATE.stats.pathLength = pathCells.length;
+      updateMetrics();
+
+      for (const cell of pathCells) {
+        if (!STATE.isRunning) return;
+        const el = document.getElementById(`cell-${cell.r}-${cell.c}`);
+        el.classList.remove('visited');
+        el.classList.add('path');
+        await sleep(25);
+      }
+    }
+
+    // Module Tab Switching
+    document.querySelectorAll('#moduleTabs .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (STATE.isRunning) return; // Prevent tab switch during active animation
+
+        document.querySelectorAll('#moduleTabs .tab-btn').forEach(b => {
+          b.classList.remove('text-white', 'bg-brand-600', 'shadow-md');
+          b.classList.add('text-gray-400');
+        });
+        btn.classList.add('text-white', 'bg-brand-600', 'shadow-md');
+        btn.classList.remove('text-gray-400');
+
+        STATE.currentModule = btn.dataset.tab;
+        updateDropdownAndLegends();
+        resetCurrentModule();
+      });
+    });
+
+    // Algorithm Select Change
+    DOM.algoSelect.addEventListener('change', (e) => {
+      STATE.currentAlgo = e.target.value;
+      updateComplexityCards();
+      resetCurrentModule();
+    });
+
+    // Slider inputs
+    DOM.sizeRange.addEventListener('input', (e) => {
+      STATE.arraySize = parseInt(e.target.value, 10);
+      DOM.sizeDisplay.innerText = STATE.arraySize;
+      if (!STATE.isRunning) resetCurrentModule();
+    });
+
+    DOM.speedRange.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      // Invert speed value so higher slider position = faster speed (lower delay)
+      STATE.speed = 255 - val;
+      if (val < 80) DOM.speedDisplay.innerText = 'Slow';
+      else if (val < 180) DOM.speedDisplay.innerText = 'Medium';
+      else DOM.speedDisplay.innerText = 'Fast';
+    });
+
+    // Master Reset Function
+    function resetCurrentModule() {
+      STATE.isRunning = false;
+      STATE.isPaused = false;
+      DOM.startBtn.disabled = false;
+      DOM.pauseBtn.innerHTML = '<i class="fa-solid fa-pause text-xs"></i><span>Pause</span>';
+
+      if (STATE.currentModule === 'sorting') {
+        initSortingArray();
+      } else if (STATE.currentModule === 'searching') {
+        initSearchingArray();
+      } else if (STATE.currentModule === 'pathfinding') {
+        initPathfindingGrid();
+      }
+    }
+
+    DOM.resetBtn.addEventListener('click', resetCurrentModule);
+
+    DOM.clearWallsBtn.addEventListener('click', () => {
+      if (!STATE.isRunning) clearGridVisuals(false);
+    });
+
+    DOM.generateMazeBtn.addEventListener('click', () => {
+      if (!STATE.isRunning) generateRandomMaze();
+    });
+
+    // Pause / Resume Toggle
+    DOM.pauseBtn.addEventListener('click', () => {
+      if (!STATE.isRunning) return;
+      STATE.isPaused = !STATE.isPaused;
+      if (STATE.isPaused) {
+        DOM.pauseBtn.innerHTML = '<i class="fa-solid fa-play text-xs text-emerald-400"></i><span>Resume</span>';
+        setStatus('Paused', 'paused');
+      } else {
+        DOM.pauseBtn.innerHTML = '<i class="fa-solid fa-pause text-xs"></i><span>Pause</span>';
+        setStatus('Running...', 'running');
+      }
+    });
+
+    // Master Start / Visualize Dispatcher
+    DOM.startBtn.addEventListener('click', async () => {
+      if (STATE.isRunning) return;
+
+      STATE.isRunning = true;
+      STATE.isPaused = false;
+      DOM.startBtn.disabled = true;
+      DOM.pauseBtn.innerHTML = '<i class="fa-solid fa-pause text-xs"></i><span>Pause</span>';
+      setStatus('Running...', 'running');
+
+      try {
+        if (STATE.currentModule === 'sorting') {
+          if (STATE.currentAlgo === 'bubble') await runBubbleSort();
+          else if (STATE.currentAlgo === 'selection') await runSelectionSort();
+          else if (STATE.currentAlgo === 'insertion') await runInsertionSort();
+          else if (STATE.currentAlgo === 'quick') await runQuickSort();
+          else if (STATE.currentAlgo === 'merge') await runMergeSort();
+        } else if (STATE.currentModule === 'searching') {
+          if (STATE.currentAlgo === 'linearSearch') await runLinearSearch();
+          else if (STATE.currentAlgo === 'binarySearch') await runBinarySearch();
+        } else if (STATE.currentModule === 'pathfinding') {
+          if (STATE.currentAlgo === 'bfs') await runBFS();
+          else if (STATE.currentAlgo === 'dijkstra') await runDijkstra();
+          else if (STATE.currentAlgo === 'dfs') await runDFS();
+        }
+      } catch (err) {
+        console.error('Visualization interrupted:', err);
+      } finally {
+        STATE.isRunning = false;
+        DOM.startBtn.disabled = false;
+        if (DOM.systemStatusText.innerText === 'Running...') {
+          setStatus('Complete', 'finished');
+        }
+      }
+    });
+
+    // Theory Offcanvas Drawer Toggling
+    DOM.theoryDrawerBtn.addEventListener('click', () => {
+      DOM.theoryDrawer.classList.remove('translate-x-full');
+    });
+
+    DOM.closeDrawerBtn.addEventListener('click', () => {
+      DOM.theoryDrawer.classList.add('translate-x-full');
+    });
+
+    // Initialize application on window load
+    window.onload = function() {
+      updateDropdownAndLegends();
+      initSortingArray();
+    };
+  </script>
+</body>
+</html>
